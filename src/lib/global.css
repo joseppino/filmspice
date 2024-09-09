@@ -1,0 +1,17 @@
+:root {
+  --colour1: #E9D8A6;
+  --colour2: #94D2BD;
+  --colour3: #0A9396;
+  --colour4: #005F73;
+  --colour5: #001219;
+  --colour6: #EE9B00;
+  --colour7: #CA6702;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: var(--colour1);
+}
