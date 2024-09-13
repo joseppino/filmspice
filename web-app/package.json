@@ -20,6 +20,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@supabase/supabase-js": "^2.45.3",
 		"purecss": "^3.0.0",
 		"svelte-french-toast": "^1.2.0",
 		"svelte-loading-spinners": "^0.3.6"
