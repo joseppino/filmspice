@@ -11,6 +11,7 @@
 <style>
   main {
     min-height: 100vh;
+    min-width: 400px;
     display: flex;
     flex-direction: column;
     align-items: center;

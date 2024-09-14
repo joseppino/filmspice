@@ -17,20 +17,20 @@ class FilmifyParams(BaseModel):
     power: list = [0.8,0.2,0.1]
     sharpen: int = 0
     scale: float = 1.0
-    saturation: float = 1.0
+    saturation: float = 0.8
 
 @app.get("/")
 def read_root():
     return 200
 
 @app.post("/filmify/")
-def handle_request(params: FilmifyParams):
+async def handle_request(params: FilmifyParams):
     output_filename = download_image(params.image_path)
     filmified_filename = filmify_image(output_filename, params)
     filmified_image_path = upload_new_image(filmified_filename)
     jpg_output_filename = filmified_image_path[4::]
     print(jpg_output_filename)
-    clean_up(params.image_path, output_filename, filmified_filename, jpg_output_filename)
+    await clean_up(params.image_path, output_filename, filmified_filename, jpg_output_filename)
     return { "filmified_image_path": filmified_image_path}
 
 def download_image(impath: str):
@@ -64,7 +64,7 @@ def filmify_image(filename: str, params: FilmifyParams):
         cmd.append("--scale")
         cmd.append(str(params.scale))
 
-    if(params.saturation != 1.0):
+    if(params.saturation != 0.8):
         cmd.append("--sat")
         cmd.append(str(params.saturation))
     
@@ -88,7 +88,7 @@ def upload_new_image(filename: str):
         supabase.storage.from_("filmspice").upload(file=f,path=f"out/{jpg_filename}", file_options={"content-type": "image/png"})
     return f"out/{jpg_filename}"
 
-def clean_up(infolder_filepath: str, downloaded_filepath: str, processed_filepath, jpg_filepath: str):
+async def clean_up(infolder_filepath: str, downloaded_filepath: str, processed_filepath, jpg_filepath: str):
     # TODO
     # DELETE LOCAL FILES
     # DELETE FILE IN SB "IN FOLDER"
