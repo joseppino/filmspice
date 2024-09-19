@@ -1,5 +1,3 @@
-import type { PageLoad } from './$types';
-
 import uploadFile from '$lib/server/uploadFile.js';
 import { fail } from '@sveltejs/kit';
 import createSignedURL from '$lib/server/createSignedURL';
@@ -46,6 +44,7 @@ export const actions = {
             ...filmify_config
           })
         })
+        // if(!res.status) CHECK FOR ERROR CODE
         const responseJson = await res.json();
         if("filmified_image_path" in responseJson) {
           signedImageURL = await createSignedURL(responseJson.filmified_image_path) ?? "";

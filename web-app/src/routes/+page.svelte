@@ -1,19 +1,28 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
+  import { error } from "@sveltejs/kit";
   import { Toaster, toast } from "svelte-french-toast";
   import { Moon } from "svelte-loading-spinners";
+  //@ts-ignore
+  import ImageCompare from "svelte-image-compare";
+  import ImageCompareModal from "$lib/components/ImageCompareModal.svelte";
+  
 
-  export let data;
   export let form;
 
+  let showModal: boolean = false;
   let filmifiedImageURL: string = "";
-
-  $: if("responseText" in data) console.log(data.responseText);
+  let jobSubmitted: boolean = false;
 
   $: if(form && "filmifiedImageURL" in form) {
     awaitingFilmification = false;
     if (form.filmifiedImageURL) filmifiedImageURL = form.filmifiedImageURL;
+    console.log(form.filmifiedImageURL);
+    
   }
+
+  $: filmified = filmifiedImageURL.length > 0;
   
   let fileInput: HTMLInputElement;
   let saturationOption: HTMLLIElement;
@@ -27,15 +36,15 @@
   let showSettings: boolean = false;
   let sizeScaleValue: number = 1.0;
   let saturationValue: number = 0.8;
-  let coarsenessValue: number = 1;
-  let coarsenessValueDescription: string = "Finest";
+  let coarsenessValue: number = 2;
+  let coarsenessValueDescription: string = "Fine";
   let grainPowerValue: number = 3;
   let grainPowerValueDescription: string = "Medium";
   let greyscaleChecked: boolean = false;
 
   $: switch(coarsenessValue) {
-      case 2:
-        coarsenessValueDescription = "Fine";
+      case 1:
+        coarsenessValueDescription = "Finer";
         break;
       case 3:
         coarsenessValueDescription = "Coarse";
@@ -44,7 +53,7 @@
         coarsenessValueDescription = "Coarser";
         break;
       default:
-        coarsenessValueDescription = "Finer";
+        coarsenessValueDescription = "Fine";
         break;
     }
 
@@ -82,9 +91,13 @@
 </script>
 
 <Toaster />
-<h1>Filmspice</h1>
-<form class="pure-form" method="post"enctype="multipart/form-data" use:enhance>
+<form class="pure-form" method="post"enctype="multipart/form-data"
+  use:enhance
+  on:submit={() => jobSubmitted = true}
+>
+<a href="#">Test Anchor</a>
   <div>
+    {#if !jobSubmitted}
     <div id="upload-control">
       <label for="photo" class="custom-file-upload">Upload a photo</label>
       <input accept="image/png, image/jpeg" id="photo" name="photo" type="file" required
@@ -93,129 +106,131 @@
         on:change={handleFileInputChange}
       />
     </div>
+  {/if}
   </div>
 
   {#if file && fileValidated}
-    <button class="pure-button reset"
-    on:click={() => {
-        fileInput.value = "";
-        fileInput.disabled = false;
-        //@ts-ignore
-        file = null;
+    {#if !jobSubmitted}
+      <button class="reset pure-button"
+      on:click={() => {
+          fileInput.value = "";
+          fileInput.disabled = false;
+          //@ts-ignore
+          file = null;
+          filmifiedImageURL = "";
+          filmified = false;
+          jobSubmitted = false;
+        }
       }
-    }
-    >Reset
-    </button>
-    <div>
-      <img src={URL.createObjectURL(file)} alt="" id="imagePreview">
-    </div>
+      >Reset
+      </button>
+    {/if}
+    <img src={URL.createObjectURL(file)} alt="" id="imagePreview">
 
-    <button type="button" id="settings-btn" class="pure-button"
-    on:click={() => showSettings = !showSettings}>Settings +</button>
-    {#if showSettings}
+    {#if !jobSubmitted}
       <div id="settings">
-      <legend>Settings</legend>
-        <ul>
-          <li>
-            <label for="greyscale">Greyscale</label>
-            <input type="checkbox" name="greyscale" id="greyscale"
-            bind:checked={greyscaleChecked}>
-          </li>
-          <li>
-            <label for="sharpen">Sharpen</label>
-            <input type="checkbox" name="sharpen" id="sharpen">
-          </li>
-          <li>
-            <label for="scalesize">{`Scale Size (${sizeScaleValue * 100}%)`}</label>
-            <input type="range" name="scalesize" id="scalesize" min="0.5" max="3" step="0.5" placeholder="1.0"
-            bind:value={sizeScaleValue}>
-          </li>
-          <!-- Remove colour saturation option if greyscale option chosen -->
-          {#if !greyscaleChecked}
-            <li bind:this={saturationOption}>
-              <label for="saturation">{`Saturation (${saturationValue * 100}%)`}</label>
-              <input type="range" name="saturation" id="saturation" min="0" max="1" step="0.1" placeholder="0.8"
-              bind:value={saturationValue}>
+        <legend>
+          <a href={``} on:click={() => showSettings = !showSettings}>
+            Settings +
+          </a>
+        </legend>
+        {#if showSettings}
+          <ul>
+            <li style="margin-bottom: 5px;">
+              <label for="greyscale">Greyscale</label>
+              <input type="checkbox" name="greyscale" id="greyscale"
+              bind:checked={greyscaleChecked}>
             </li>
-          {/if}
-          <li>
-            <label for="graintype">{`Grain Coarseness (${coarsenessValueDescription})`}</label>
-            <input type="range" name="graintype" id="graintype" min="1" max="4" step="1" placeholder="1"
-            bind:value={coarsenessValue}>
-          </li>
-          <li>
-            <label for="power">{`Grain Power (${grainPowerValueDescription})`}</label>
-            <input type="range" name="power" id="power" min="1" max="5" step="1" placeholder="3"
-            bind:value={grainPowerValue}>
-          </li>
-        </ul>
+            <li>
+              <label for="sharpen">Sharpen</label>
+              <input type="checkbox" name="sharpen" id="sharpen">
+            </li>
+            <!-- Remove colour saturation option if greyscale option chosen -->
+            {#if !greyscaleChecked}
+              <li class="vertical-labelled"
+                bind:this={saturationOption}>
+                <label for="saturation">{`Saturation (${saturationValue * 100}%)`}</label>
+                <input type="range" name="saturation" id="saturation" min="0" max="1" step="0.1" placeholder="0.8"
+                bind:value={saturationValue}>
+              </li>
+            {/if}
+            <li class="vertical-labelled">
+              <label for="graintype">{`Grain Coarseness (${coarsenessValueDescription})`}</label>
+              <input type="range" name="graintype" id="graintype" min="1" max="4" step="1" placeholder="1"
+              bind:value={coarsenessValue}>
+            </li>
+            <li class="vertical-labelled">
+              <label for="power">{`Grain Power (${grainPowerValueDescription})`}</label>
+              <input type="range" name="power" id="power" min="1" max="5" step="1" placeholder="3"
+              bind:value={grainPowerValue}>
+            </li>
+            <li class="vertical-labelled">
+              <label for="scalesize">{`Grain Expansion (${(sizeScaleValue * 100) - 100}%)`}</label>
+              <input type="range" name="scalesize" id="scalesize" min="0.5" max="3" step="0.5" placeholder="1.0"
+              bind:value={sizeScaleValue}>
+            </li>
+          </ul>
+        {/if}
       </div>
     {/if}
   {/if}
 
-  <button type="submit" class="pure-button submit" on:click={() => awaitingFilmification = true}>Filmify!</button>
+  {#if !jobSubmitted}
+    <div>
+      <button type="submit" class="pure-button submit"
+        on:click={() => awaitingFilmification = true}
+      >
+      Filmify!</button>
+    </div>
+  {/if}
 </form>
 
 {#if awaitingFilmification}
   <div>
     <Moon size="60" color="var(--colour3)" unit="px" duration="1s" />
     <p>Filmifying...</p>
+    <button class="reset pure-button"
+      on:click={() => goto("/aborted")}
+    >Abort</button>
   </div>
 {/if}
 
-{#if filmifiedImageURL}
-  <img src={filmifiedImageURL} alt="Spiced">
-{/if}
+{#if filmified}
+  <img src={filmifiedImageURL} alt="Spiced" id="filmifiedPreview">
+  <a href={filmifiedImageURL} download="filmspice.jpg" target="_blank">Download</a>
+  <button class="pure-button" on:click={() => window.location.reload()}>Go Again!</button>
 
-<style>
-  input[type="file"] {
-    display: none;
-  }
+  <ImageCompareModal 
+  bind:showModal 
+  originalImageUrl={URL.createObjectURL(file)}
+  {filmifiedImageURL}
+  >
+	<!-- <h2 slot="header">
+		modal
+		<small><em>adjective</em> mod·al \ˈmō-dəl\</small>
+	</h2> -->
 
-  .custom-file-upload {
-    border: 1px solid #ccc;
-    background-color: #e6e6e6;
-    border-radius: 2px;
-    display: inline-block;
-    padding: 6px 12px;
-    cursor: pointer;
-    color: rgba(0,0,0,.8);
-  }
-
-  .custom-file-upload:hover {
-    opacity: 90%;
-  }
-
-  #upload-control {
-    display: flex;
-    flex-direction: column;
-  }
-
-  #settings-btn {
-    font-size: 70%;
-  }
-
-  #settings ul{
-    list-style-type: none;
-    padding: 0;
-  }
+	<!-- <ol class="definition-list">
+		<li>of or relating to modality in logic</li>
+		<li>
+			containing provisions as to the mode of procedure or the manner of taking effect —used of a
+			contract or legacy
+		</li>
+		<li>of or relating to a musical mode</li>
+		<li>of or relating to structure as opposed to substance</li>
+		<li>
+			of, relating to, or constituting a grammatical form or category characteristically indicating
+			predication
+		</li>
+		<li>of or relating to a statistical mode</li>
+	</ol> -->
 
   
 
- .submit {
-    margin-top: 5px;
- }
 
- .reset {
-  margin-top: 5px;
-  background-color: #AE2012;
-  color: white;
- }
+	<!-- <a href="https://www.merriam-webster.com/dictionary/modal">merriam-webster.com</a> -->
+  </ImageCompareModal>
+{/if}
 
- #imagePreview {
-  min-width: 200px;
-  max-width: 300px;
-  margin-top: 5px;
-  margin-bottom: 5px;
- }
-</style>
+<button class="pure-button" on:click={() => showModal = true}>Show Modal</button>
+
